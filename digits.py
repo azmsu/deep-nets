@@ -3,12 +3,16 @@ import matplotlib.pyplot as plt
 import matplotlib.cbook as cbook
 import time
 from scipy.misc import imread
+from scipy.misc import imsave
 from scipy.misc import imresize
 import matplotlib.image as mpimg
 from scipy.ndimage import filters
 import urllib
-from numpy import random
+from numpy import *
+from matplotlib.pyplot import *
+import scipy.stats
 from scipy.io import loadmat
+import tensorflow as tf
 
 # np.set_printoptions(threshold=1000000)
 
@@ -44,7 +48,7 @@ def get_data(set):
 
 def get_performance(Y, X, W):
     '''
-    Gets the performance of the (test) data given the W matrix
+    Gets the performance of the data Y, X given the W matrix
     :param Y: classification matrix where each row is the one-hot encoding vector for an image (nx10 numpy array)
     :param X: flattened image matrix where each row is a flattened image (nx785 numpy array)
     :param W: weight matrix where the ith row corresponds to the weights for output i (10x785 numpy array)
@@ -125,8 +129,11 @@ def grad_descent(Y, X, W, alpha):
     '''
     EPS = 1e-6
     prev_W = W - 10*EPS
-    max_iter = 5000
+    max_iter = 2001
     iter = 0
+    # for LaTeX
+    train_out = ""
+    test_out = ""
 
     X_test, Y_test = get_data('test')
 
@@ -134,17 +141,56 @@ def grad_descent(Y, X, W, alpha):
         prev_W = W.copy()
         P = softmax(X, W)
         W -= alpha*gradient(P, Y, X)
-        if iter % 100 == 0:
+        if iter % 50 == 0:
             print 'Iteration:', iter
             print 'Cost', cost(P, Y)
-            print 'Performance', get_performance(Y_test, X_test, W)
+            train_perf = get_performance(Y, X, W)
+            test_perf = get_performance(Y_test, X_test, W)
+            print 'Train Performance', train_perf
+            print 'Test Performance', test_perf
+            train_out += str((iter, train_perf))
+            test_out += str((iter, test_perf))
             print
         iter += 1
 
     c = cost(P, Y)
 
     print "Minimum found at", W, "with cost function value of", c, "on iteration", iter
-    return W
+    return W, train_out, test_out
+
+# PART 5
+def plot_line(theta, x_min, x_max, color, label):
+    x_grid_raw = arange(x_min, x_max, 0.01)
+    x_grid = vstack((ones_like(x_grid_raw), x_grid_raw,))
+    y_grid = dot(theta, x_grid)
+    plot(x_grid[1, :], y_grid, color, label=label)
+
+
+def gen_lin_data_1d(theta, N, sigma):
+    # Actual data
+    x_raw = 100*(random.random((N))-.5)
+
+    x = vstack((ones_like(x_raw), x_raw))
+
+    y = dot(theta, x) + scipy.stats.norm.rvs(scale=sigma, size=N)
+
+    plot(x[1,:], y, "ro", label = "Training set")
+
+    # Actual generating process
+    plot_line(theta, -70, 70, "b", "Actual generating process")
+
+    # Least squares solution
+    theta_hat = dot(linalg.inv(dot(x, x.T)), dot(x, y.T))
+    plot_line(theta_hat, -70, 70, "g", "Maximum Likelihood Solution")
+
+    # Multinomial logistic regression solution
+    x = x.T # make size Nx2
+    discrete_step = max(y) - min(y)/5.
+
+    legend(loc=1)
+    xlim([-70, 70])
+    ylim([-100, 100])
+
 
 # MAIN CODE
 X, Y = get_data('train')
@@ -163,6 +209,17 @@ W = np.ones((10, 785))
 
 # PART 4 - train network
 print 'running part 4...'
-W = grad_descent(Y, X, W, 1e-5)
+W, train_out, test_out = grad_descent(Y, X, W, 1e-5)
+
+print "Train plot for LaTeX:", train_out
+print "Test plot for LaTeX:", test_out
+
+for i in range(10):
+    w = W[i, 1:]
+    w = w.reshape([28, 28])
+    imsave("digits/digit"+str(i)+".jpg", w)
+
 print 'done part 4'
 
+# PART 5 - compare linear regression with multinomial logistic regression
+# gen_lin_data_1d(array([1, 3]), 100, 1)

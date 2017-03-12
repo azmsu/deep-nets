@@ -35,7 +35,7 @@ def get_train_batch(M, N):
     batch_xs = zeros((0, 28*28))
     batch_y_s = zeros( (0, 10))
     
-    train_k =  ["train"+str(i) for i in range(10)]
+    train_k = ["train"+str(i) for i in range(10)]
 
     train_size = len(M[train_k[0]])
     #train_size = 5000
