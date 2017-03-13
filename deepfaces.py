@@ -429,3 +429,54 @@ if __name__ == "__main__":
     print "Validation", val_plot
     print "Train", train_plot
 
+    # PART 11: visualizing weights
+    neurons, neuron_ids = [], []
+
+    # get 1 image of each actor/actress and input to neural network
+    batch_x, batch_y_ = get_batch(train_set, 6)
+    for i in range(6):
+        single_x = np.array([batch_x[i, :]])
+        single_y_ = np.array([batch_y_[i, :]])
+
+        acc = sess.run(accuracy, feed_dict={x: single_x, y_: single_y_})
+
+        # image is correctly classified
+        if acc == 1:
+            # get the output from the hidden layer
+            hidden_layer = sess.run(layer1, feed_dict={x: single_x, y_: single_y_})
+            # add the index of the max hidden layer neuron
+            neurons += [argmax(hidden_layer)]
+            # stores which actor/actress does this image belong to
+            neuron_ids += [argmax(single_y_)]
+
+    W = sess.run(W0)
+    for i in range(len(neurons)):
+        w = W[:, neurons[i]]
+        a = act[neuron_ids[i]]
+        save_name = names[neuron_ids[i]]
+        w = reshape(w, [1, 13, 13, 384])
+
+        rand = random.permutation(384)[:5]
+
+        for j in rand:
+            wj = w[:, :, :, j]
+            wj = wj.reshape([13, 13])
+
+            imsave('part11/p11w'+str(save_name)+'feat'+str(j)+'.jpg', wj)
+
+        x = tf.placeholder(tf.float32, (1, 13, 13, 384))
+        k_h = 1; k_w = 1; c_o = 1; s_h = 1; s_w = 1
+        convW = tf.Variable(ones((1, 1, 384, 1)).astype(float32))
+        convb = tf.Variable(zeros((1,)).astype(float32))
+        flat = conv(x, convW, convb, k_h, k_w, c_o, s_h, s_w, padding="SAME", group=1)
+        init = tf.initialize_all_variables()
+        sess = tf.Session()
+        sess.run(init)
+
+        flat_out = sess.run(flat, feed_dict={x: w})
+        flat_out = flat_out[0, :, :, :]
+        flat_out = flat_out.reshape((13, 13))
+
+        imsave('part11/w'+str(save_name)+'.jpg', flat_out)
+
+
